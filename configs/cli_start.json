@@ -1,0 +1,11 @@
+{
+  "scenarios_dir": "configs",
+  "mode": "sequential",
+  "loop": false,
+  "count": 1,
+  "scenario_name": "team_brawl",
+  "screen_w": 1024,
+  "screen_h": 768,
+  "cell_size": 64,
+  "log_level": "FULL"
+}

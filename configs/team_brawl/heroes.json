@@ -1,0 +1,11 @@
+{
+  "A": [
+    { "role": "SWORD",     "pos": [0, 0] },
+    { "role": "ARCHER",    "pos": [1, 1] }
+  ],
+  "B": [
+    { "role": "SHIELD",    "pos": [9, 9] },
+    { "role": "MAGE_SUPP", "pos": [8, 8] },
+    { "role": "MAGE_DPS", "pos": [7, 7] }
+  ]
+}
