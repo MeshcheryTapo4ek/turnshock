@@ -40,6 +40,9 @@ class GameScreen:
         self.selected_ability_idx = None
         self._pending_actions = {}
 
+        # для анимаций: unit_id -> (t0, (start_x,start_y), (end_x,end_y))
+        self._animations: dict[int, tuple[float, tuple[float,float], tuple[float,float]]] = {}
+
     def handle_event(self, event: pygame.event.Event) -> None:
         # 1) Кнопки управления скоростью
         if self.controls.handle_event(event):
@@ -105,12 +108,19 @@ class GameScreen:
 
     def update(self):
         # авто-тики
+        # когда _send_tick вызывается, в нём формируются анимации
         self.controls.update(self._send_tick)
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill((30, 30, 30))
         self.controls.draw(surface)
-        self.board_view.draw(surface, self.state, selected_unit_id=self.selected_unit_id)
+        self.board_view.draw(
+            surface,
+            self.state,
+            self.selected_unit_id,
+            self._animations,
+            self.controls._tick_interval
+        )
         self.action_overlay.draw(surface, self.state, self._pending_actions)
         self.ability_bar.draw(
             surface,
@@ -120,6 +130,22 @@ class GameScreen:
         self.info_panel.draw(surface, self.state.units.get(self.selected_unit_id))
 
     def _send_tick(self):
+        # 1) запомним старые pixel-координаты
+        old_pos = {
+            u.id: self.board_view.renderer.cell_center(u.pos)
+            for u in self.state.units.values()
+        }
+        # 2) сам тик
         self.domain.send_intents(self._pending_actions)
-        self.state = self.domain.get_state()
+        new_state = self.domain.get_state()
+        # 3) запомним новые координаты и сформируем анимации
+        now = time.time()
+        self._animations = {}
+        for u in new_state.units.values():
+            start = old_pos.get(u.id)
+            end   = self.board_view.renderer.cell_center(u.pos)
+            if start and start != end:
+                self._animations[u.id] = (now, start, end)
+        # 4) обновим состояние и сбросим pending
+        self.state = new_state
         self._pending_actions.clear()
