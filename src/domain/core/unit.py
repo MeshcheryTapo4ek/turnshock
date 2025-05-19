@@ -7,7 +7,7 @@ from domain.engine.combat import add_effect_to_unit, apply_damage_to_unit, apply
 from domain.geometry.pathfinding import find_path
 
 from ..constants import TeamId
-from ..enums import UnitRole
+from ..enums import EffectType, UnitRole
 from ..geometry.position import Position
 from .ability import Ability
 from .effect import Effect
@@ -28,16 +28,18 @@ class HeroUnit:
 
     profile: CharacterProfile
 
-    hp: int = field(init=False)
-    ap: int = field(init=False)
+    hp: int =   field(init=False)
+    ap: int =   field(init=False)
+    luck: int = field(init=False)
     effects: list[Effect] = field(default_factory=list, init=False)
 
     # single in‐flight action
     current_action: Optional[ActiveAction] = field(default=None, init=False)
 
     def __post_init__(self):
-        self.hp = self.profile.max_hp
-        self.ap = self.profile.max_ap
+        self.hp     = self.profile.max_hp
+        self.ap     = self.profile.max_ap
+        self.luck   = self.profile.luck
 
     def is_alive(self) -> bool:
         return self.hp > 0
@@ -46,6 +48,10 @@ class HeroUnit:
     def abilities(self) -> Iterable[Ability]:
         return self.profile.abilities
 
+    @property
+    def luck(self) -> int:
+        return self.profile.luck
+    
     def tick_effects(self) -> None:
         remaining = []
         for eff in self.effects:
@@ -57,7 +63,15 @@ class HeroUnit:
         self.effects = remaining
 
     def apply_ap_regen(self) -> None:
-        self.ap = min(self.profile.max_ap, self.ap + self.profile.ap_regen)
+        """
+        Regenerate AP taking into account SLOW_AP debuffs and AP_BOOST buffs.
+        """
+        base_regen: int = self.profile.ap_regen
+        slow_amount: int = sum(e.value for e in self.effects if e.type is EffectType.SLOW_AP)
+        boost_amount: int = sum(e.value for e in self.effects if e.type is EffectType.AP_BOOST)
+
+        regen: int = max(0, base_regen - slow_amount + boost_amount)
+        self.ap = min(self.profile.max_ap, self.ap + regen)
 
     # ─── combat shortcuts ──────────────────────────────────────────
 
@@ -102,12 +116,12 @@ class HeroUnit:
         """
         Execute the current_action one tick:
           1) If casting already started → tick down
-          2) Else if it's a movement ability → walk/sprint along path
+          2) Else if it's a movement ability → walk/sprint along path (no stepping onto occupied cells)
           3) Else if in range & have AP → begin cast
           4) Else if out of range & have AP → step closer
           5) Else wait.
-        After an action completes, *re-queues* it (keeps repeating) until overridden.
-        Returns the completed ActiveAction (once), else None.
+        After an action completes, *re-queues* it until overridden.
+        Returns the completed ActiveAction once, else None.
         """
         act = self.current_action
         if not act:
@@ -124,7 +138,7 @@ class HeroUnit:
                 return None
             tgt_pos = tgt_u.pos
         else:
-            tgt_pos = act.target  # could be None for SELF; cast logic handles that
+            tgt_pos = act.target
 
         # 1) ongoing cast?
         if getattr(act, "started", False):
@@ -132,7 +146,6 @@ class HeroUnit:
             if done:
                 logger.log_lvl2(f"Unit {self.id} finished cast '{ab.name}'")
                 completed = act
-                # re-queue a fresh ActiveAction
                 self.current_action = ActiveAction(
                     ability=ab,
                     target=act.target,
@@ -146,21 +159,23 @@ class HeroUnit:
 
         # 2) movement abilities
         if name in ("move_to", "sprint"):
-            # on first tick, build path
             if act.path is None:
                 act.path = find_path(self.pos, tgt_pos, state)
-
             if not act.path:
                 return None
 
             step_len = ab.range
             moved = 0
             while moved < step_len and self.ap > 0 and act.path:
+                next_pos = act.path[0]
+                occupant = state.get_unit_at(next_pos)
+                if occupant and occupant.is_alive() and occupant.id != self.id:
+                    logger.log_lvl2(f"Unit {self.id} movement blocked at {next_pos} by unit {occupant.id}")
+                    break
                 self.pos = act.path.pop(0)
                 self.ap -= 1
                 moved += 1
 
-            # reached?
             if not act.path or self.pos == tgt_pos:
                 logger.log_lvl2(f"Unit {self.id} reached move target {tgt_pos}")
                 completed = act
@@ -198,8 +213,11 @@ class HeroUnit:
         if self.ap > 0 and self.pos.distance(tgt_pos) > ab.range:
             path = find_path(self.pos, tgt_pos, state)
             if path:
-                self.pos = path[0]
-                self.ap -= 1
+                next_pos = path[0]
+                occupant = state.get_unit_at(next_pos)
+                if not (occupant and occupant.is_alive() and occupant.id != self.id):
+                    self.pos = next_pos
+                    self.ap -= 1
             return None
 
         # 5) no AP → wait

@@ -17,7 +17,7 @@ def arrow_shot(dmg: int = 20, cost: int = 3, rng: int = 5) -> Ability:
         effects=frozenset({
             Effect(EffectType.DAMAGE, value=dmg, duration=0)
         }),
-        cast_time=1,
+        cast_time=2,
         aoe=0
     )
 
@@ -26,7 +26,7 @@ def crippling_shot(
     cost: int = 4,
     rng: int = 4,
     slow: int = 2,
-    duration: int = 2
+    duration: int = 3
 ) -> Ability:
     return Ability(
         name="crippling_shot",
@@ -61,15 +61,16 @@ def sand_throw(
 
 class ArcherProfile(CharacterProfile):
     def __init__(self) -> None:
-        self._max_hp   = 80
-        self._max_ap   = 16
-        self._ap_regen = 1
+        self._max_hp        = 75
+        self._max_ap        = 16
+        self._ap_regen      = 2
+        self._luck: int     = 30
 
         self._abilities: Tuple[Ability, ...] = (
             move_to_ability(range=1, cost=1),
             arrow_shot(dmg=20, cost=3, rng=5),
-            crippling_shot(dmg=15, cost=4, rng=4, slow=1, duration=1),
-            sand_throw(chance=50, cost=2, rng=2, duration=1),
+            crippling_shot(dmg=15, cost=4, rng=4, slow=1, duration=3),
+            sand_throw(chance=50, cost=2, rng=2, duration=3),
         )
 
     @property
@@ -87,3 +88,7 @@ class ArcherProfile(CharacterProfile):
     @property
     def abilities(self) -> Iterable[Ability]:
         return self._abilities
+    
+    @property
+    def luck(self):
+        return self._luck

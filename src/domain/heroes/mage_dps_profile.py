@@ -87,16 +87,17 @@ class MageDpsProfile(CharacterProfile):
     """
 
     def __init__(self) -> None:
-        self._max_hp: int   = 70
-        self._max_ap: int   = 16
-        self._ap_regen: int = 1
+        self._max_hp: int   = 60
+        self._max_ap: int   = 24
+        self._ap_regen: int = 2
+        self._luck: int     = 15
 
         # cache abilities to enforce immutability
         self._abilities: Tuple[Ability, ...] = (
             move_to_ability(range=1, cost=1),
-            fireball(dmg=30, cost=4, rng=4, aoe=1, cast_time=1),
-            ice_shard(dmg=15, cost=2, rng=3, slow=1, duration=1, cast_time=1),
-            chain_lightning(dmg=30, bounces=2, bounce_mult=0.5, cost=5, rng=3, cast_time=1),
+            fireball(dmg=30, cost=10, rng=4, aoe=1, cast_time=3),
+            ice_shard(dmg=15, cost=5, rng=3, slow=1, duration=2, cast_time=2),
+            chain_lightning(dmg=45, bounces=2, bounce_mult=0.5, cost=12, rng=2, cast_time=1),
         )
 
     @property
@@ -114,3 +115,7 @@ class MageDpsProfile(CharacterProfile):
     @property
     def abilities(self) -> Iterable[Ability]:
         return self._abilities
+
+    @property
+    def luck(self):
+        return self._luck

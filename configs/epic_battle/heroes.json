@@ -1,0 +1,22 @@
+{
+  "A": [
+    { "role": "SHIELD",  "pos": [1, 1] },
+    { "role": "SHIELD",  "pos": [3, 1] },
+    { "role": "ARCHER",    "pos": [5, 1] },
+    { "role": "ARCHER",    "pos": [7, 1] },
+    { "role": "BARD",      "pos": [9, 1] },
+    { "role": "ASSASSIN",  "pos": [11, 1] },
+    { "role": "MAGE_DPS",  "pos": [4, 3] },
+    { "role": "MAGE_SUPP", "pos": [8, 3] }
+  ],
+  "B": [
+    { "role": "SWORDSMAN", "pos": [1, 11] },
+    { "role": "SWORDSMAN", "pos": [3, 11] },
+    { "role": "ARCHER",    "pos": [5, 11] },
+    { "role": "ARCHER",    "pos": [7, 11] },
+    { "role": "MAGE_DPS",  "pos": [9, 11] },
+    { "role": "ASSASSIN",  "pos": [11, 11] },
+    { "role": "MAGE_SUPP", "pos": [4, 9] },
+    { "role": "BARD",      "pos": [8, 9] }
+  ]
+}

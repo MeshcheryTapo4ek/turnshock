@@ -14,7 +14,7 @@ def activate_dodge(chance: int = 50, duration: int = 1, cost: int = 1) -> Abilit
         cost=cost,
         target=TargetType.SELF,
         effects=frozenset({Effect(EffectType.DODGE, chance, duration)}),
-        cast_time=1
+        cast_time=2
     )
 
 def cleave(dmg: int = 25, duration: int = 0, cost: int = 4) -> Ability:
@@ -25,18 +25,19 @@ def cleave(dmg: int = 25, duration: int = 0, cost: int = 4) -> Ability:
         target=TargetType.ENEMY,
         effects=frozenset({Effect(EffectType.DAMAGE, dmg, duration)}),
         aoe=1,
-        cast_time=1
+        cast_time=2
     )
 
 class SwordsmanProfile(CharacterProfile):
     def __init__(self) -> None:
-        self._max_hp = 100
+        self._max_hp = 110
         self._max_ap = 16
-        self._ap_regen = 1
+        self._ap_regen = 2
+        self._luck = 25
         self._abilities: Tuple[Ability, ...] = (
             # базовые
             move_to_ability(range=1, cost=1),
-            melee_attack(dmg=25, cost=2),
+            melee_attack(dmg=25, cost=3),
             sprint(extra_tiles=2, cost=2),
             # уникальные мечника
             activate_dodge(chance=50, duration=1, cost=1),
@@ -58,3 +59,7 @@ class SwordsmanProfile(CharacterProfile):
     @property
     def abilities(self):
         return self._abilities
+
+    @property
+    def luck(self):
+        return self._luck

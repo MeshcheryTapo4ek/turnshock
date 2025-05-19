@@ -27,6 +27,9 @@ class Ability:
     # now a set of full Effect objects
     effects: FrozenSet[Effect]
 
+    crit_base: float = 5.0     # базовый шанс крита в %
+    fumble_base: float = 2.0   # базовый шанс провала в %
+
     # timing & extras
     cast_time: int = 1
     aoe: int = 0

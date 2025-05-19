@@ -30,6 +30,14 @@ class CharacterProfile(ABC):
 
     @property
     @abstractmethod
+    def luck(self) -> int:
+        """luck value."""
+        ...
+
+    @property
+    @abstractmethod
     def abilities(self) -> Iterable[Ability]:
         """Base abilities available to this hero."""
         ...
+
+    

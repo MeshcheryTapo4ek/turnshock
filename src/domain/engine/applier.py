@@ -1,6 +1,9 @@
 # src/domain/engine/applier.py
 
+import random
 from typing import List
+
+from domain.engine.combat import calculate_damage
 from ..core.state import GameState
 from ..core.unit import HeroUnit
 from ..core.ability import Ability
@@ -30,23 +33,38 @@ def apply_ability(
 
     if ability.aoe > 0:
         for u in state.units.values():
-            if u is not primary and u.pos.manhattan(target_pos) <= ability.aoe:
+            if u is not primary and u.pos.distance(target_pos) <= ability.aoe:
                 targets.append(u)
 
     # примение эффектов
     for u in targets:
         for eff in ability.effects:
+
+            blinds = [e for e in u.effects if e.type is EffectType.BLIND]
+            if blinds:
+                blind = blinds[0]
+                roll = random.uniform(0, 100)
+                logger.log_lvl2(f"Unit {u.id} BLIND roll={roll:.2f} vs chance={blind.value}")
+                if roll < blind.value:
+                    logger.log_lvl2(f"Unit {u.id} evades '{ability.name}' due to BLIND")
+                    continue
+
+            # 1) Урон — через calculate_damage (учёт crit/fumble, BUFF/DEBUFF на кастере)
             if eff.type is EffectType.DAMAGE:
-                dealt = u.apply_damage(eff.value)
+                dmg = calculate_damage(caster, ability)
+                dealt = u.apply_damage(dmg)
                 enemy = (u.team != caster.team)
                 stats_tracker.record_damage(caster.id, ability.name, dealt, enemy)
-                logger.log_lvl3(f"Unit {u.id} took {dealt} damage")
+                logger.log_lvl3(f"Unit {u.id} took {dealt} damage (rolled {dmg})")
+
+            # 2) Лечение — как было
             elif eff.type is EffectType.HEAL:
                 healed = u.apply_heal(eff.value)
                 stats_tracker.record_heal(caster.id, ability.name, healed)
                 logger.log_lvl3(f"Unit {u.id} healed {healed}")
+
+            # 3) Все остальные эффекты (BUFF, DEBUFF, SLOW_AP, AP_BOOST и т.д.) — навешиваем на цель
             else:
-                # бафф или дебафф
                 u.add_effect(eff)
                 stats_tracker.record_effect(caster.id, ability.name, eff.type, eff.value)
                 logger.log_lvl3(f"Unit {u.id} gains {eff.type.name} ({eff.value})")

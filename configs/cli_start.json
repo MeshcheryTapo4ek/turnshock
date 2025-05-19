@@ -1,9 +1,9 @@
 {
   "scenarios_dir": "configs",
   "mode": "sequential",
-  "loop": false,
-  "count": 1,
-  "scenario_name": "team_brawl",
+  "loop": true,
+  "count": 3,
+  "scenario_name": "epic_battle",
   "screen_w": 1024,
   "screen_h": 768,
   "cell_size": 64,

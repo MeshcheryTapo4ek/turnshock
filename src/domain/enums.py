@@ -1,8 +1,9 @@
 from enum import Enum, auto
 
 class UnitRole(Enum):
-    SWORD = auto(); SHIELD = auto()
+    SWORDSMAN = auto(); SHIELD = auto(); ASSASSIN = auto()
     ARCHER = auto(); MAGE_DPS = auto(); MAGE_SUPP = auto()
+    BARD = auto()
 
 class EffectType(Enum):
     DAMAGE = auto(); HEAL = auto()
@@ -10,7 +11,9 @@ class EffectType(Enum):
     SLOW_AP = auto(); AP_BOOST = auto()
     DODGE = auto(); TAUNT = auto()
     SHIELD = auto(); BLIND = auto()
-    BOUNCE = auto()
+    BOUNCE = auto(); FUMBLE = auto()
+    CRIT_DAMAGE = auto()
+    STUN = auto()
 
 class TargetType(Enum):
     ENEMY = auto(); ALLY = auto()

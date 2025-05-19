@@ -13,14 +13,18 @@ from ..heroes.defender_profile import DefenderProfile
 from ..heroes.archer_profile    import ArcherProfile
 from ..heroes.mage_dps_profile  import MageDpsProfile
 from ..heroes.mage_supp_profile import MageSuppProfile
+from ..heroes.assassin_profile import AssassinProfile
+from ..heroes.bard_profile import BardProfile
 
 # маппинг роли → класс профиля
 _PROFILE_MAP: Dict[UnitRole, type] = {
-    UnitRole.SWORD:    SwordsmanProfile,
+    UnitRole.SWORDSMAN:    SwordsmanProfile,
     UnitRole.SHIELD:   DefenderProfile,
     UnitRole.ARCHER:   ArcherProfile,
     UnitRole.MAGE_DPS: MageDpsProfile,
     UnitRole.MAGE_SUPP: MageSuppProfile,
+    UnitRole.ASSASSIN: AssassinProfile,
+    UnitRole.BARD: BardProfile
 }
 
 def create_heroes_for_setup(

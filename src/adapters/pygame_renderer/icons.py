@@ -10,11 +10,13 @@ Store all “official” emojis and symbols used in the game:
 
 # Emojis for unit roles (UnitRole)
 ROLE_ICONS: dict[str, str] = {
-    "sword":     "🗡",   # Melee attacker
+    "swordsman":     "🗡",   # Melee attacker
     "shield":    "🛡",   # Defender/Tank
     "archer":    "🏹",   # Ranged
     "mage_dps":  "☄",   # Offensive mage
     "mage_supp": "✧",   # Support mage
+    "bard":         "🎶",
+    "assassin":     " 🕷️",
 }
 
 # Emojis for effects and abilities
@@ -39,6 +41,9 @@ EFFECT_ICONS: dict[str, str] = {
     "root":        "⊠",
     "dispel":      "💨",
     "stealth":     "⸜",
+    "crit_damage":  "✨💥",
+    "fumble":      "💫",
+     
 }
 
 # Emojis for standard UI buttons
@@ -68,4 +73,12 @@ ABILITY_ICONS: dict[str, str] = {
     "time_warp":        "⏳",
     "activate_dodge":   "🌀",
     "move_to":          "→",
+    # Новые от баpда
+    "chant_of_valor":    "🎵",
+    "dirge_of_futility": "🕯️",
+    # Новые от ассасина
+    "stun_strike":       "💥",
+    # Новые от саппорт-мага
+    "healing_wave":      "💧",
+    "arcane_barrier":    "🛡️",
 }

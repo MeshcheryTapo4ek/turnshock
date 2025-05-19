@@ -1,5 +1,6 @@
 # relative path: src/adapters/pygame_renderer/board_renderer.py
 
+from domain.enums import EffectType
 import pygame
 from typing import Optional, Tuple
 from domain.core.state import GameState
@@ -25,6 +26,13 @@ class BoardRenderer:
         self.field_width = self.cell_size * board_size
         self.left = (screen_w - self.field_width) // 2
         self.top = int(screen_h * 0.05)
+
+        self.board_rect = pygame.Rect(
+            self.left,
+            self.top,
+            self.field_width,
+            self.field_width
+        )
 
         # Шрифт с emoji
         try:
@@ -94,10 +102,52 @@ class BoardRenderer:
             text_rect = text_surf.get_rect(center=rect.center)
             surface.blit(text_surf, text_rect)
 
+            # draw health and shield bars above the unit if damaged or shielded
             if unit.is_alive():
-                hp_text = self.font.render(str(unit.hp), True, (30, 255, 50))
-                hp_rect = hp_text.get_rect(center=(rect.centerx, rect.top + 16))
-                surface.blit(hp_text, hp_rect)
+                max_hp = unit.profile.max_hp
+                # positions for bars
+                bar_h = 4
+                pad = 2
+                bar_w = self.cell_size - pad * 2
+                # health bar only if not full
+                if unit.hp < max_hp:
+                    hp_ratio = unit.hp / max_hp
+                    hp_bg_rect = pygame.Rect(
+                        rect.left + pad,
+                        rect.top - bar_h - pad,
+                        bar_w,
+                        bar_h
+                    )
+                    hp_fg_rect = pygame.Rect(
+                        rect.left + pad,
+                        rect.top - bar_h - pad,
+                        int(bar_w * hp_ratio),
+                        bar_h
+                    )
+                    pygame.draw.rect(surface, (60, 60, 60), hp_bg_rect)
+                    pygame.draw.rect(surface, (200, 0, 0), hp_fg_rect)
+                # shield bar if present
+                shield_amount = sum(
+                    e.value for e in unit.effects
+                    if e.type is EffectType.SHIELD
+                )
+                if shield_amount > 0:
+                    shield_ratio = min(shield_amount / max_hp, 1.0)
+                    sh_y = rect.top - bar_h * 2 - pad * 2
+                    sh_bg_rect = pygame.Rect(
+                        rect.left + pad,
+                        sh_y,
+                        bar_w,
+                        bar_h
+                    )
+                    sh_fg_rect = pygame.Rect(
+                        rect.left + pad,
+                        sh_y,
+                        int(bar_w * shield_ratio),
+                        bar_h
+                    )
+                    pygame.draw.rect(surface, (60, 60, 120), sh_bg_rect)
+                    pygame.draw.rect(surface, (0, 120, 200), sh_fg_rect)
 
     def get_cell_at_pixel(self, x: int, y: int) -> Optional[Tuple[int, int]]:
         """Вернёт координаты клетки (x, y) на доске, если пиксель внутри доски."""
@@ -117,3 +167,11 @@ class BoardRenderer:
             if (unit.pos.x, unit.pos.y) == cell and unit.is_alive():
                 return unit
         return None
+    
+    def cell_center(self, pos: "Position") -> tuple[int, int]:
+        """
+        Возвращает координаты центра клетки с позицией pos на экране.
+        """
+        cx = self.left + pos.x * self.cell_size + self.cell_size // 2
+        cy = self.top  + pos.y * self.cell_size + self.cell_size // 2
+        return cx, cy

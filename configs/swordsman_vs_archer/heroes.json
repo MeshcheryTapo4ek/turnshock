@@ -1,6 +1,6 @@
 {
   "A": [
-    { "role": "SWORD", "pos": [1, 1] }
+    { "role": "SWORDSMAN", "pos": [1, 1] }
   ],
   "B": [
     { "role": "ARCHER", "pos": [8, 8] }
