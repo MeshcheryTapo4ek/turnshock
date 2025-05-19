@@ -1,5 +1,4 @@
 # src/domain/factory/game_factory.py
-# relative path: domain/factory/game_factory.py
 
 from typing import Dict, Set
 from ..core.state import GameState
@@ -8,11 +7,10 @@ from ..factory.unit_factory import create_heroes_for_setup
 from ..geometry.position import Position
 from ..core.unit import HeroUnit
 from ..constants import TeamId
+from config.logger import RTS_Logger
 
-# src/domain/factory/game_factory.py
 
-from domain.logger import DomainLogger, LogLevel
-from config.cli_config import cli_settings
+logger = RTS_Logger()
 
 def build_new_game(
     *,
@@ -26,7 +24,7 @@ def build_new_game(
       - hero_setup: описание юнитов на старте
       - obstacles, regen_zone: параметры карты
     """
-    logger = DomainLogger(__name__, LogLevel[cli_settings.log_level])
+    
 
     # 1. Создаём всех юнитов
     heroes: list[HeroUnit] = create_heroes_for_setup(hero_setup)

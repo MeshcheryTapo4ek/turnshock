@@ -4,13 +4,15 @@ from typing import List
 from ..core.state import GameState
 from ..core.unit import HeroUnit
 from ..core.ability import Ability
-from ..core.effect import Effect
-from ..enums import EffectType
-from ..geometry.position import Position
-from ..logger import DomainLogger, LogLevel
-from config.cli_config import cli_settings
+from ..core.effect import EffectType, Effect
 
-logger = DomainLogger(__name__, LogLevel[cli_settings.log_level])
+from ..analytics.stats import stats_tracker
+from ..geometry.position import Position
+
+from config.logger import RTS_Logger
+
+logger = RTS_Logger()
+
 
 def apply_ability(
     state: GameState,
@@ -18,46 +20,33 @@ def apply_ability(
     ability: Ability,
     target_pos: Position
 ) -> None:
-    """
-    Применяет способность ability к target_pos:
-    - AoE/aoe: область вокруг
-    - shield, heal, buff и т.д.
-    - Обрабатывает все эффекты
-    """
+    # зафиксировать факт использования
+    stats_tracker.record_use(caster.id, ability.name)
     logger.log_lvl2(f"Caster {caster.id} uses '{ability.name}' on {target_pos}")
-    # 1. Сбор целей
-    targets: List[HeroUnit] = []
-    primary = state.get_unit_at(target_pos)
-    if primary:
-        targets.append(primary)
 
-    # AoE
+    # соберём список целей
+    primary = state.get_unit_at(target_pos)
+    targets: List[HeroUnit] = [primary] if primary else []
+
     if ability.aoe > 0:
         for u in state.units.values():
             if u is not primary and u.pos.manhattan(target_pos) <= ability.aoe:
                 targets.append(u)
 
-    # 2. Применяем эффекты
+    # примение эффектов
     for u in targets:
         for eff in ability.effects:
             if eff.type is EffectType.DAMAGE:
-                dmg = eff.value
-                logger.log_lvl3(f"Applying DAMAGE {dmg} to unit {u.id}")
-                shields = [e for e in u.effects if e.type is EffectType.SHIELD]
-                if shields:
-                    shield = shields[0]
-                    absorbed = min(shield.value, dmg)
-                    u.effects.remove(shield)
-                    if shield.value - absorbed > 0:
-                        u.effects.append(Effect(EffectType.SHIELD, shield.value-absorbed, shield.duration))
-                    dmg -= absorbed
-                u.hp = max(0, u.hp - dmg)
-
-            elif eff.type is EffectType.HEAL and u.is_alive():
-                logger.log_lvl3(f"Applying HEAL {eff.value} to unit {u.id}")
-                u.hp = min(u.profile.max_hp, u.hp + eff.value)
-
+                dealt = u.apply_damage(eff.value)
+                enemy = (u.team != caster.team)
+                stats_tracker.record_damage(caster.id, ability.name, dealt, enemy)
+                logger.log_lvl3(f"Unit {u.id} took {dealt} damage")
+            elif eff.type is EffectType.HEAL:
+                healed = u.apply_heal(eff.value)
+                stats_tracker.record_heal(caster.id, ability.name, healed)
+                logger.log_lvl3(f"Unit {u.id} healed {healed}")
             else:
-                logger.log_lvl3(f"Applying effect {eff.type.name} ({eff.value}/{eff.duration}) to {u.id}")
-                if u.is_alive():
-                    u.effects.append(eff)
+                # бафф или дебафф
+                u.add_effect(eff)
+                stats_tracker.record_effect(caster.id, ability.name, eff.type, eff.value)
+                logger.log_lvl3(f"Unit {u.id} gains {eff.type.name} ({eff.value})")

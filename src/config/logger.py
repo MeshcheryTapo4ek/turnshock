@@ -1,10 +1,11 @@
-# relative path: src/domain/logger.py
+# relative path: src/config/logger.py
 
 import inspect
 import logging
 from enum import Enum
 from typing import Final, Optional, Union
 
+from .cli_config import cli_settings
 
 class LogLevel(Enum):
     """Четыре уровня детализации логирования."""
@@ -23,41 +24,49 @@ LOG_LEVEL_MAP: Final[dict[LogLevel, int]] = {
 }
 
 
-class DomainLogger:
-    """Доменный логгер: пушит module.__name__ в имя по умолчанию."""
+class RTS_Logger:
+    """
+    Домeнный логгер:
+      - Автоматически берёт имя логгера из модуля-вызова.
+      - Уровень по умолчанию — из cli_settings.log_level (строка или LogLevel).
+      - Формирует единственный StreamHandler с форматом "[<logger_name>]: <msg>".
+    """
+
     __slots__ = ("logger", "level")
 
     def __init__(
         self,
-        name_or_level: Union[str, LogLevel],
-        level: Optional[LogLevel] = None
+        name: Optional[str] = None,
+        level: Optional[Union[LogLevel, str]] = None,
     ) -> None:
-        # Разбираем сигнатуру: (level) или (name, level)
-        if isinstance(name_or_level, LogLevel):
-            name = None
-            self.level = name_or_level
+        # 1) Определяем уровень
+        lvl_setting = level if level is not None else cli_settings.log_level
+        if isinstance(lvl_setting, str):
+            try:
+                self.level = LogLevel[lvl_setting]
+            except KeyError:
+                raise ValueError(f"Unknown log level: {lvl_setting!r}")
+        elif isinstance(lvl_setting, LogLevel):
+            self.level = lvl_setting
         else:
-            name = name_or_level
-            if not isinstance(level, LogLevel):
-                raise TypeError("Если первый аргумент — имя, второй должен быть LogLevel")
-            self.level = level
+            raise TypeError("level must be either LogLevel or string key")
 
-        # Если имя не задано, берём module.__name__ вызова
+        # 2) Определяем имя логгера
         if name is None:
+            # имя модуля-вызова
             frame = inspect.stack()[1].frame
             mod = inspect.getmodule(frame)
-            name = mod.__name__ if mod else "domain"
-
-        # Конфигурируем стандартный logging.getLogger
+            name = mod.__name__ if mod else "rts"
         self.logger = logging.getLogger(name)
         self._configure_handlers()
 
     def _configure_handlers(self) -> None:
-        lvl = LOG_LEVEL_MAP[self.level]
-        self.logger.setLevel(lvl)
-        if not self.logger.handlers:
+        lvlno = LOG_LEVEL_MAP[self.level]
+        self.logger.setLevel(lvlno)
+        # добавляем один StreamHandler, если его ещё нет
+        if not any(isinstance(h, logging.StreamHandler) for h in self.logger.handlers):
             handler = logging.StreamHandler()
-            handler.setLevel(lvl)
+            handler.setLevel(lvlno)
             fmt = logging.Formatter("[%(name)s]: %(message)s")
             handler.setFormatter(fmt)
             self.logger.addHandler(handler)

@@ -70,7 +70,7 @@ def validate_ability(
     if not target.in_bounds():
         raise OutOfBounds(f"Target {target} out of bounds")
 
-    dist = unit.pos.manhattan(target)
+    dist = unit.pos.distance(target)
     if dist > ability.range:
         raise InvalidAction(f"Target {target} too far ({dist} > {ability.range})")
 

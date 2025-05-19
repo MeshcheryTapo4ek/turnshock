@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 from typing import Optional, Iterable
 
+from domain.engine.combat import add_effect_to_unit, apply_damage_to_unit, apply_heal_to_unit, calculate_damage
 from domain.geometry.pathfinding import find_path
 
 from ..constants import TeamId
@@ -12,11 +13,10 @@ from .ability import Ability
 from .effect import Effect
 from ..heroes.profile import CharacterProfile
 from .action import ActiveAction
-from ..logger import DomainLogger, LogLevel
-from config.cli_config import cli_settings
+from config.logger import RTS_Logger
 
 
-logger = DomainLogger(__name__, LogLevel[cli_settings.log_level])
+logger = RTS_Logger()
 
 
 @dataclass(slots=True)
@@ -59,106 +59,148 @@ class HeroUnit:
     def apply_ap_regen(self) -> None:
         self.ap = min(self.profile.max_ap, self.ap + self.profile.ap_regen)
 
+    # ─── combat shortcuts ──────────────────────────────────────────
+
+    def apply_damage(self, amount: int) -> int:
+        return apply_damage_to_unit(self, amount)
+
+    def apply_heal(self, amount: int) -> int:
+        return apply_heal_to_unit(self, amount)
+
+    def add_effect(self, effect: Effect) -> None:
+        add_effect_to_unit(self, effect)
+    
+    def calculate_damage(self, ability: Ability) -> int:
+        return calculate_damage(self, ability)
     # ─── action management ──────────────────────────────────
 
-    def start_action(self, ability: Ability, target: Optional[Position], state, target_unit_id: Optional[int] = None) -> None:
-        logger.log_lvl2(
-            f"[start_action] Unit {self.id} | ability='{ability.name}', target={target}, current_action={self.current_action}"
-        )
-
-        prev_ap = self.ap
-        self.ap -= ability.cost
-        logger.log_lvl2(
-            f"[start_action] Unit {self.id}: AP {prev_ap} -> {self.ap} (cost {ability.cost})"
-        )
-
-        path = None
-        logger.log_lvl2(
-            f"[start_action] Unit {self.id}: checking for movement: ability.name.lower()={ability.name.lower()}"
-        )
-        # ВСЕГДА инициализируем path
-        if ability.name.lower() in ("move_to", "sprint"):
-
-            if target_unit_id is not None:
-                target_unit = state.units.get(target_unit_id)
-                if target_unit:
-                    goal = target_unit.pos
-                else:
-                    goal = self.pos  # fallback
-            else:
-                goal = target
-
-            logger.log_lvl2(f"[start_action] Unit {self.id}: Calling find_path from {self.pos} to {goal}")
-            path = find_path(self.pos, goal, state)
-        else:
-            path = None  # явно
-
+    def start_action(
+        self,
+        ability: Ability,
+        target: Optional[Position],
+        state: "GameState",
+        target_unit_id: Optional[int] = None
+    ) -> None:
+        """
+        Begin a new action, even if one is in progress (unless it's casting).
+        """
+        prev = self.current_action
+        if prev and getattr(prev, "started", False):
+            # if in the middle of a cast, don't override
+            raise RuntimeError("Cannot override a casting action")
+        logger.log_lvl3(f"[start_action] Unit {self.id} ⇒ '{ability.name}' @ {target or target_unit_id}")
         self.current_action = ActiveAction(
             ability=ability,
             target=target,
             target_unit_id=target_unit_id,
             ticks_remaining=ability.cast_time,
-            path=path
-        )
-        logger.log_lvl2(
-            f"[start_action] Unit {self.id} STARTED action '{ability.name}' with path={path}"
+            path=None,
+            started=False
         )
 
-    def advance_action(self, state) -> Optional["ActiveAction"]:
+    def advance_action(self, state: "GameState") -> Optional[ActiveAction]:
         """
-        Исполняет текущее действие юнита:
-        - если уже в радиусе, хватает AP — начинает кастовать (started = True)
-        - если каст начался, отсчитывает ticks_remaining
-        - если не хватает range — делает шаг к цели
-        - если не хватает AP — ждёт
+        Execute the current_action one tick:
+          1) If casting already started → tick down
+          2) Else if it's a movement ability → walk/sprint along path
+          3) Else if in range & have AP → begin cast
+          4) Else if out of range & have AP → step closer
+          5) Else wait.
+        After an action completes, *re-queues* it (keeps repeating) until overridden.
+        Returns the completed ActiveAction (once), else None.
         """
-        if not self.current_action:
+        act = self.current_action
+        if not act:
             return None
 
-        action = self.current_action
-        ability = action.ability
-        target = action.target
-        target_unit_id = getattr(action, 'target_unit_id', None)
+        ab = act.ability
+        name = ab.name.lower()
 
-        # Если target - юнит, берём его позицию
-        if target_unit_id is not None:
-            target_unit = state.units.get(target_unit_id)
-            if not target_unit or not target_unit.is_alive():
+        # determine current target position
+        if act.target_unit_id is not None:
+            tgt_u = state.units.get(act.target_unit_id)
+            if not tgt_u or not tgt_u.is_alive():
                 self.current_action = None
                 return None
-            target_pos = target_unit.pos
+            tgt_pos = tgt_u.pos
         else:
-            target_pos = target
+            tgt_pos = act.target  # could be None for SELF; cast logic handles that
 
-        # --- 1. Если каст уже начался (started=True) — просто тикаем дальше ---
-        if getattr(action, "started", False):
-            done = action.tick()
+        # 1) ongoing cast?
+        if getattr(act, "started", False):
+            done = act.tick()
             if done:
-                completed = self.current_action
-                self.current_action = None
+                logger.log_lvl2(f"Unit {self.id} finished cast '{ab.name}'")
+                completed = act
+                # re-queue a fresh ActiveAction
+                self.current_action = ActiveAction(
+                    ability=ab,
+                    target=act.target,
+                    target_unit_id=act.target_unit_id,
+                    ticks_remaining=ab.cast_time,
+                    path=None,
+                    started=False
+                )
                 return completed
             return None
 
-        # --- 2. Если можем кастовать (AP и расстояние) — начинаем каст ---
-        if self.ap >= ability.cost and self.pos.manhattan(target_pos) <= ability.range:
-            # Снимаем AP только при старте каста (не каждый тик)
-            self.ap -= ability.cost
-            action.started = True
-            done = action.tick()
-            if done:
-                completed = self.current_action
-                self.current_action = None
+        # 2) movement abilities
+        if name in ("move_to", "sprint"):
+            # on first tick, build path
+            if act.path is None:
+                act.path = find_path(self.pos, tgt_pos, state)
+
+            if not act.path:
+                return None
+
+            step_len = ab.range
+            moved = 0
+            while moved < step_len and self.ap > 0 and act.path:
+                self.pos = act.path.pop(0)
+                self.ap -= 1
+                moved += 1
+
+            # reached?
+            if not act.path or self.pos == tgt_pos:
+                logger.log_lvl2(f"Unit {self.id} reached move target {tgt_pos}")
+                completed = act
+                self.current_action = ActiveAction(
+                    ability=ab,
+                    target=act.target,
+                    target_unit_id=act.target_unit_id,
+                    ticks_remaining=ab.cast_time,
+                    path=None,
+                    started=False
+                )
                 return completed
             return None
 
-        # --- 3. Если не в радиусе — двигаемся ближе ---
-        if self.ap > 0 and self.pos.manhattan(target_pos) > ability.range:
-            path = find_path(self.pos, target_pos, state)
+        # 3) can start cast?
+        if self.ap >= ab.cost and (name == "sprint" or self.pos.distance(tgt_pos) <= ab.range):
+            self.ap -= ab.cost
+            act.started = True
+            done = act.tick()
+            if done:
+                logger.log_lvl2(f"Unit {self.id} instant '{ab.name}'")
+                completed = act
+                self.current_action = ActiveAction(
+                    ability=ab,
+                    target=act.target,
+                    target_unit_id=act.target_unit_id,
+                    ticks_remaining=ab.cast_time,
+                    path=None,
+                    started=False
+                )
+                return completed
+            return None
+
+        # 4) step closer if out of range & have AP
+        if self.ap > 0 and self.pos.distance(tgt_pos) > ab.range:
+            path = find_path(self.pos, tgt_pos, state)
             if path:
-                # Двигаемся на 1 клетку (или больше для sprint)
                 self.pos = path[0]
-                self.ap -= 1  # Или сколько стоит шаг
+                self.ap -= 1
             return None
 
-        # --- 4. Нет AP — просто ждём (ничего не делаем) ---
+        # 5) no AP → wait
         return None

@@ -46,7 +46,7 @@ def sprint(extra_tiles: int = 2, cost: int = 2) -> Ability:
     """
     return Ability(
         name="sprint",
-        range=0,
+        range=2,
         cost=cost,
         target=TargetType.POINT,
         effects=frozenset({

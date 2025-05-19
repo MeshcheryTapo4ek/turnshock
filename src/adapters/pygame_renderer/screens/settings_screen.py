@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Callable, List, Tuple
 
 from config.cli_config import cli_settings, save_cli_settings
-from domain.logger import LogLevel
+from config.logger import LogLevel
 
 from ..constants import (
     BG_COLOR, FONT_PATH, TEXT_COLOR,

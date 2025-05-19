@@ -4,11 +4,11 @@ from ..constants import BOARD_SIZE
 @dataclass(frozen=True, slots=True)
 class Position:
     x: int; y: int
-    def manhattan(self, other) -> int:
+    def distance(self, other) -> int:
         if isinstance(other, Position):
-            return abs(self.x - other.x) + abs(self.y - other.y)
-        elif hasattr(other, "pos"):
-            return abs(self.x - other.pos.x) + abs(self.y - other.pos.y)
+            return max(abs(self.x - other.x), abs(self.y - other.y))
+        if hasattr(other, "pos"):
+            return max(abs(self.x - other.pos.x), abs(self.y - other.pos.y))
         else:
             raise TypeError(f"manhattan: expected Position or object with .pos, got {type(other)}")
     

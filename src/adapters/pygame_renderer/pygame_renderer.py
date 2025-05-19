@@ -8,9 +8,10 @@ from .constants import TARGET_FPS
 from .screens.menu_screen import MenuScreen
 from .screens.settings_screen import SettingsScreen
 from config.cli_config import cli_settings
+from config.logger import RTS_Logger
 from .screens.game_screen import GameScreen
 from application.game_generator import build_generator_config_from_cli, generate_games
-from domain.logger import DomainLogger, LogLevel
+
 
 
 
@@ -36,7 +37,7 @@ class PyGameRenderer:
         self.running = False
 
         # Logger for domain/game events
-        self.domain_logger = DomainLogger(__name__, LogLevel[cli_settings.log_level])
+        self.domain_logger = RTS_Logger()
 
         self.domain = None
         self.state = None
@@ -60,7 +61,7 @@ class PyGameRenderer:
     def _on_start(self) -> None:
         self.domain = DomainConnector()
         self.state = self.domain.get_state()
-        self.game_screen = GameScreen(self.domain, self.state, screen_w=self.screen_w, screen_h=self.screen_h, board_size=10)
+        self.game_screen = GameScreen(self.domain, self.state, screen_w=self.screen_w, screen_h=self.screen_h, board_size=13)
         self.current_screen = self.game_screen
 
     def _on_settings(self) -> None:

@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 from pydantic import BaseModel
 from typing import Literal
-from domain.logger import LogLevel
 
 LogLevelLiteral = Literal["NONE", "BRIEF", "DETAILED", "FULL"]
 

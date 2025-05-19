@@ -14,10 +14,9 @@ from domain.geometry.position import Position
 from .board_renderer import BoardRenderer
 from ..icons import ABILITY_ICONS, EFFECT_ICONS
 
-from domain.logger import DomainLogger, LogLevel
-from config.cli_config import cli_settings
+from config.logger import RTS_Logger
 
-logger = DomainLogger(__name__, LogLevel[cli_settings.log_level])
+logger = RTS_Logger()
 
 class GameScreen:
     def __init__(self, domain_connector, state: GameState, screen_w: int, screen_h: int, board_size: int = 10):
