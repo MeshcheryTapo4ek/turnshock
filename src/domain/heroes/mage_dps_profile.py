@@ -74,7 +74,7 @@ def chain_lightning(
             Effect(EffectType.DAMAGE, value=dmg, duration=0)
         }),
         cast_time=cast_time,
-        aoe=0,
+        aoe=3,
         bounces=bounces,
         bounce_mult=bounce_mult
     )

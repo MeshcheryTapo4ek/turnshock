@@ -13,18 +13,13 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.renderer == "pygame":
-        try:
-            from adapters.pygame_renderer.pygame_renderer import PyGameRenderer
-        except ImportError as e:
-            print(f"Ошибка импорта pygame-рендера: {e}")
-            sys.exit(1)
+        from ui.pygame.app import PyGameApp
 
-        renderer = PyGameRenderer(
-            screen_w=cli_settings.screen_w,
-            screen_h=cli_settings.screen_h,
-            cell_size=cli_settings.cell_size
-        )
-        renderer.run()
+        PyGameApp(
+            width=cli_settings.screen_w,
+            height=cli_settings.screen_h,
+            cell=cli_settings.cell_size,
+        ).run()
     else:
         print("Текстовый режим пока не реализован.")
         sys.exit(0)

@@ -1,7 +1,7 @@
 {
   "adapters":    { "emit_code": true,      "emit_md": true },
-  "application": { "emit_code": false,      "emit_md": true },
+  "application": { "emit_code": true,      "emit_md": true },
   "config":      { "emit_code": false,      "emit_md": true },
   "domain":      { "emit_code": true,      "emit_md": true },
-  "interfaces":  { "emit_code": false,      "emit_md": true }
+  "interfaces":  { "emit_code": true,      "emit_md": true }
 }

@@ -35,6 +35,8 @@ class HeroUnit:
 
     # single in‐flight action
     current_action: Optional[ActiveAction] = field(default=None, init=False)
+    # Новое поле: какая ability была реально завершена на последнем тике
+    completed_action: Optional[ActiveAction] = field(default=None, init=False)
 
     def __post_init__(self):
         self.hp     = self.profile.max_hp
@@ -144,6 +146,7 @@ class HeroUnit:
         if getattr(act, "started", False):
             done = act.tick()
             if done:
+                self.completed_action = act
                 logger.log_lvl2(f"Unit {self.id} finished cast '{ab.name}'")
                 completed = act
                 self.current_action = ActiveAction(
@@ -196,6 +199,7 @@ class HeroUnit:
             act.started = True
             done = act.tick()
             if done:
+                self.completed_action = act
                 logger.log_lvl2(f"Unit {self.id} instant '{ab.name}'")
                 completed = act
                 self.current_action = ActiveAction(

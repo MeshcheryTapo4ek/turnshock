@@ -90,9 +90,13 @@ def apply_heal_to_unit(unit: 'HeroUnit', amount: int) -> int:
     Восстанавливает unit здоровье, не превышая max_hp.
     Возвращает фактически восстановленное значение.
     """
+    if not unit.is_alive():
+        return 0
+
     before = unit.hp
     unit.hp = min(unit.profile.max_hp, unit.hp + amount)
     return unit.hp - before
+
 
 def add_effect_to_unit(unit: 'HeroUnit', effect: Effect) -> None:
     """

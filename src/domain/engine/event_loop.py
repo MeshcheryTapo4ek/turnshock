@@ -53,10 +53,15 @@ def event_tick(
 ) -> tuple[GameState, Dict[int, bool], bool]:
     executed: Dict[int, bool] = {}
     logger.log_lvl2(f"=== Tick {state.tick} START ===")
+    
+    # Шаг 0. Очистить completed_action, оставшееся после прошлого тика
+    for u in state.units.values():
+        u.completed_action = None
 
     # 1) Aging status effects
     for u in state.units.values():
-        u.tick_effects()
+        if u.is_alive:
+            u.tick_effects()
 
     # 2) Zone effects
     state.board.apply_zone_effects(state)

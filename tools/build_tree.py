@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 from config.config_loader import load_structure_config
 
+
+use_test = True
 # 1) загрузка секций и их опций из configs/parse.json
 STRUCTURE_CONFIG = load_structure_config("configs/parse.json")
 # теперь у нас в STRUCTURE_CONFIG есть поля adapters, application, config, domain, interfaces
@@ -48,8 +50,14 @@ def build_section_tree(section: str, root: Path, opts) -> dict:
                 continue
             path = Path(dirpath) / fn
             if fn.endswith(".py") and opts.emit_code:
-                # показываем только путь
-                ptr[fn] = {"path": str(path), "content": None}
+                try:
+                   txt = path.read_text(encoding="utf-8")
+                except Exception as e:
+                    txt = f"[ERROR reading file: {e}]"
+                if not use_test:
+                    txt = None
+                ptr[fn] = {"path": str(path), "content": txt}
+
             elif fn.endswith(".md") and opts.emit_md:
                 # показываем путь + содержимое
                 try:

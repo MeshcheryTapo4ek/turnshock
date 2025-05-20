@@ -13,7 +13,7 @@ def provoke(radius: int = 2, cost: int = 1, duration: int = 2) -> Ability:
         name="provoke",
         range=3,
         cost=cost,
-        target=TargetType.ENEMY,
+        target=TargetType.SELF,
         effects=frozenset({
             Effect(EffectType.TAUNT, value=radius, duration=duration)
         }),

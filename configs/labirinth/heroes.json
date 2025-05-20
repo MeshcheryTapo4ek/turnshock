@@ -1,0 +1,10 @@
+{
+  "A": [
+    { "role": "SWORDSMAN", "pos": [5, 6] },
+    { "role": "BARD",      "pos": [5, 5] }
+  ],
+  "B": [
+    { "role": "ASSASSIN", "pos": [10, 6] },
+    { "role": "ARCHER",   "pos": [10, 8] }
+  ]
+}
